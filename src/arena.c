@@ -1,7 +1,7 @@
 #include "arena.h"
 
 struct region *region_new(struct allocator alloc, size_t page_size, struct region *link) {
-  struct region *region = a_zero(a_malloc(alloc, sizeof(struct region) + page_size), sizeof(struct region));
+  struct region *region = a_struct_fao(alloc, struct region, page_size);
   region->size = page_size;
   region->cursor = 0;
   region->previous = link;
@@ -14,22 +14,22 @@ struct region *region_free(struct allocator alloc, struct region *region) {
   return previous;
 }
 
-void *arena_alloc_fn(void *ctx, void *old, size_t size) {
+void *arena_alloc_fn(void *ctx, size_t size) {
   struct arena *arena_ctx = ctx;
-  if (size) {
-    if (old == &arena_ctx->last->data[arena_ctx->last->last]) arena_ctx->last->cursor = arena_ctx->last->last;
     
-    if (arena_ctx->last->size - arena_ctx->last->cursor < size) {
-      arena_ctx->last = region_new(arena_ctx->toplevel, size > arena_ctx->page_size ? size : arena_ctx->page_size, arena_ctx->last);
-    }
-    void *ptr = &arena_ctx->last->data[arena_ctx->last->cursor];
-    arena_ctx->last->last = arena_ctx->last->cursor;
-    arena_ctx->last->cursor += size;
-    return ptr;
-  } else {
-    if (old == &arena_ctx->last->data[arena_ctx->last->last]) arena_ctx->last->cursor = arena_ctx->last->last;
+  if (arena_ctx->last->size - arena_ctx->last->cursor < size) {
+    arena_ctx->last = region_new(arena_ctx->toplevel, size > arena_ctx->page_size ? size : arena_ctx->page_size, arena_ctx->last);
   }
-  return NULL;
+  void *ptr = &arena_ctx->last->data[arena_ctx->last->cursor];
+  arena_ctx->last->last = arena_ctx->last->cursor;
+  arena_ctx->last->cursor += size;
+  return ptr;
+}
+
+void arena_free_fn(void *ctx, void *old) {
+  struct arena *arena_ctx = ctx;
+  
+  if (old == &arena_ctx->last->data[arena_ctx->last->last]) arena_ctx->last->cursor = arena_ctx->last->last;
 }
 
 struct allocator arena_new(struct allocator toplevel, size_t page_size) {
@@ -40,6 +40,7 @@ struct allocator arena_new(struct allocator toplevel, size_t page_size) {
   return (struct allocator) {
     .ctx = arena,
     .allocate = arena_alloc_fn,
+    .free = arena_free_fn,
   };
 }
 

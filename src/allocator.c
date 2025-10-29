@@ -2,29 +2,30 @@
 
 #include <stdlib.h>
 
-void *stdc_alloc_fn(void *ctx, void *old, size_t size) {
+void *stdc_alloc_fn(void *ctx, size_t size) {
   (void) ctx;
-  if (!size) { free(old); return NULL; }
-  return realloc(old, size);
+  return malloc(size);
+}
+
+void stdc_free_fn(void *ctx, void *old) {
+  (void) ctx;
+  free(old);
 }
 
 struct allocator stdc_allocator(void) {
   return (struct allocator) {
     .ctx = NULL,
     .allocate = stdc_alloc_fn,
+    .free = stdc_free_fn,
   };
 }
 
 void *a_malloc(struct allocator alloc, size_t size) {
-  return alloc.allocate(alloc.ctx, NULL, size);
-}
-
-void *a_realloc(struct allocator alloc, void *old, size_t size) {
-  return alloc.allocate(alloc.ctx, old, size);
+  return alloc.allocate(alloc.ctx, size);
 }
 
 void a_free(struct allocator alloc, void *old) {
-  alloc.allocate(alloc.ctx, old, 0);
+  alloc.free(alloc.ctx, old);
 }
 
 void *a_zero(void *ptr, size_t size) {
