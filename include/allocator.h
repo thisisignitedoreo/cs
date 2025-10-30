@@ -2,6 +2,7 @@
 #define _ALLOCATOR_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 struct allocator {
   void *ctx;
