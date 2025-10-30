@@ -32,3 +32,13 @@ void *a_zero(void *ptr, size_t size) {
   for (unsigned char *i = ptr; i < (unsigned char*) ptr + size; i++) *i = 0;
   return ptr;
 }
+
+void *a_memset(void *ptr, uint8_t byte, size_t size) {
+  for (unsigned char *i = ptr; i < (unsigned char*) ptr + size; i++) *i = 0;
+  return ptr;
+}
+
+void *a_memcpy(void *dst, void *src, size_t size) {
+  for (size_t i = 0; i < size; i++) dst[i] = src[i];
+  return dst;  
+}

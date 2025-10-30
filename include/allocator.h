@@ -15,6 +15,8 @@ void *a_malloc(struct allocator alloc, size_t size);
 void a_free(struct allocator alloc, void *old);
 
 void *a_zero(void *ptr, size_t size);
+void *a_memset(void *ptr, uint8_t byte, size_t size);
+void *a_memcpy(void *dst, void *src, size_t size);
 
 #define a_struct(a, t) (a_zero(a_malloc((a), sizeof(t)), sizeof(t)))
 #define a_struct_fao(a, t, s) (a_zero(a_malloc((a), sizeof(t) + (s)), sizeof(t)))
