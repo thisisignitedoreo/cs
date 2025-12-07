@@ -6,13 +6,13 @@
 
 struct allocator {
   void *ctx;
-  void *(*allocate)(void*, size_t);
-  void (*free)(void*, void*);
+  void *(*allocate)(void*, void*, size_t);
 };
 
 struct allocator stdc_allocator(void);
 
 void *a_malloc(struct allocator alloc, size_t size);
+void *a_realloc(struct allocator alloc, void *old, size_t size);
 void a_free(struct allocator alloc, void *old);
 
 void *a_zero(void *ptr, size_t size);
