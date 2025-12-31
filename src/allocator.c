@@ -1,10 +1,12 @@
 #include "allocator.h"
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
 
 void *stdc_alloc_fn(void *ctx, void *old, size_t size) {
   (void) ctx;
-  if (!size) { free(old); return NULL; }
+  if (size == 0) { free(old); return NULL; }
   return realloc(old, size);
 }
 
@@ -30,4 +32,27 @@ void a_free(struct allocator alloc, void *old) {
 void *a_zero(void *ptr, size_t size) {
   for (unsigned char *i = ptr; i < (unsigned char*) ptr + size; i++) *i = 0;
   return ptr;
+}
+
+void *a_memset(void *ptr, uint8_t byte, size_t size) {
+  for (unsigned char *i = ptr; i < (unsigned char*) ptr + size; i++) *i = byte;
+  return ptr;
+}
+
+void *a_memcpy(void *dst, void *src, size_t size) {
+  for (size_t i = 0; i < size; i++) ((unsigned char *)dst)[i] = ((unsigned char *)src)[i];
+  return dst;  
+}
+
+char *a_sprintf(struct allocator alloc, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  int length = vsnprintf(NULL, 0, fmt, args);
+  va_end(args);
+  char *buffer = a_malloc(alloc, length + 1);
+  buffer[length] = 0;
+  va_start(args, fmt);
+  vsnprintf(buffer, length + 1, fmt, args);
+  va_end(args);
+  return buffer;
 }

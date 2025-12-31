@@ -1,7 +1,7 @@
 #include "arena.h"
 
 struct region *region_new(struct allocator alloc, size_t page_size, struct region *link) {
-  struct region *region = a_zero(a_malloc(alloc, sizeof(struct region) + page_size), sizeof(struct region));
+  struct region *region = a_struct_fao(alloc, struct region, page_size);
   region->size = page_size;
   region->cursor = 0;
   region->previous = link;
@@ -16,20 +16,25 @@ struct region *region_free(struct allocator alloc, struct region *region) {
 
 void *arena_alloc_fn(void *ctx, void *old, size_t size) {
   struct arena *arena_ctx = ctx;
-  if (size) {
-    if (old == &arena_ctx->last->data[arena_ctx->last->last]) arena_ctx->last->cursor = arena_ctx->last->last;
-    
-    if (arena_ctx->last->size - arena_ctx->last->cursor < size) {
-      arena_ctx->last = region_new(arena_ctx->toplevel, size > arena_ctx->page_size ? size : arena_ctx->page_size, arena_ctx->last);
-    }
-    void *ptr = &arena_ctx->last->data[arena_ctx->last->cursor];
-    arena_ctx->last->last = arena_ctx->last->cursor;
-    arena_ctx->last->cursor += size;
-    return ptr;
-  } else {
-    if (old == &arena_ctx->last->data[arena_ctx->last->last]) arena_ctx->last->cursor = arena_ctx->last->last;
+  
+  if (old && old == arena_ctx->last->data + arena_ctx->last->last) arena_ctx->last->cursor = arena_ctx->last->last;
+  
+  if (arena_ctx->last->size - arena_ctx->last->cursor < size + sizeof(size_t)) {
+    arena_ctx->last = region_new(arena_ctx->toplevel, size + sizeof(size_t) > arena_ctx->page_size ? size + sizeof(size_t) : arena_ctx->page_size, arena_ctx->last);
   }
-  return NULL;
+  
+  void *ptr = &arena_ctx->last->data[arena_ctx->last->cursor];
+  *(size_t*)ptr = size;
+  arena_ctx->last->last = arena_ctx->last->cursor;
+  arena_ctx->last->cursor += size + sizeof(size_t);
+
+  if (old && old != arena_ctx->last->data + arena_ctx->last->last) {
+    size_t copy_size = *((size_t*)old - 1);
+    if (copy_size > size) copy_size = size;
+    a_memcpy((size_t*) ptr + 1, old, copy_size);
+  }
+  
+  return (size_t*) ptr + 1;
 }
 
 struct allocator arena_new(struct allocator toplevel, size_t page_size) {
@@ -46,5 +51,8 @@ struct allocator arena_new(struct allocator toplevel, size_t page_size) {
 void arena_free(struct allocator arena) {
   struct arena *arena_ctx = arena.ctx;
   struct region *current = arena_ctx->last;
-  while (current) current = region_free(arena_ctx->toplevel, current);
+  while (current) {
+    current = region_free(arena_ctx->toplevel, current);
+  }
+  a_free(arena_ctx->toplevel, arena.ctx);
 }
